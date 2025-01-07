@@ -1,14 +1,14 @@
-# BankIntegration API Dokumentation
+# BankIntegration API Documentation
 
-Som ERP-udbyder kan man tilkøbe sig adgang til BankIntegrations API  til at foretage banktransaktioner på sine kunders vegne.
+As an ERP provider, you can purchase access to the BankIntegration API to perform bank transactions on behalf of your customers.
 
-API'en er REST-baseret og fungerer kun via HTTPS.
+The API is REST-based and only works via HTTPS.
 
 ---
 
-## API Funktioner
+## API Functions
 
-### 1. **Sende betalingsanmodning**
+### 1. **Send Payment Request**
 
 **Endpoint:**
 
@@ -16,7 +16,7 @@ API'en er REST-baseret og fungerer kun via HTTPS.
 POST https://api.bankintegration.dk/payment
 ```
 
-### 2. **Hente status på betalingsanmodninger**
+### 2. **Retrieve Payment Request Status**
 
 **Endpoint:**
 
@@ -24,7 +24,7 @@ POST https://api.bankintegration.dk/payment
 GET/POST https://api.bankintegration.dk/status
 ```
 
-### 3. **Hente kontoudtog**
+### 3. **Retrieve Account Statement**
 
 **Endpoint:**
 
@@ -32,7 +32,7 @@ GET/POST https://api.bankintegration.dk/status
 GET/POST https://api.bankintegration.dk/report/account
 ```
 
-#### Eksempel på kontoudtog forespørgsel
+#### Example Account Statement Request
 
 ```json
 {
@@ -43,7 +43,7 @@ GET/POST https://api.bankintegration.dk/report/account
 }
 ```
 
-**Eksempel på svar:**
+**Example Response:**
 
 ```json
 {
@@ -53,21 +53,21 @@ GET/POST https://api.bankintegration.dk/report/account
       "date": "2025-01-06",
       "amount": "-500.00",
       "currency": "DKK",
-      "description": "Betaling til leverandør",
+      "description": "Payment to supplier",
       "transactionId": "TX12345"
     },
     {
       "date": "2025-01-05",
       "amount": "+1500.00",
       "currency": "DKK",
-      "description": "Indbetaling fra kunde",
+      "description": "Payment from customer",
       "transactionId": "TX12346"
     }
   ]
 }
 ```
 
-### 4. **Hente balance**
+### 4. **Retrieve Balance**
 
 **Endpoint:**
 
@@ -77,27 +77,27 @@ GET/POST https://api.bankintegration.dk/report/balance
 
 ---
 
-## Kom godt i gang
+## Getting Started
 
-### 1. **Få en API-nøgle**
+### 1. **Obtain an API Key**
 
-Inden brug skal du have en API-nøgle og et tilhørende ERP-navn eller -kode. De oplysninger erhverves gennem Dansk BankIntegration:
+Before use, you must obtain an API key and a corresponding ERP name or code. These details are acquired through Dansk BankIntegration:
 
 - **Email:** [support@bankintegration.dk](mailto:support@bankintegration.dk)
 
-API-nøglen skal holdes hemmelig og må kun anvendes af ERP-udbyderen.
+The API key must be kept secret and only used by the ERP provider.
 
-### 2. **Adgang til kundens profil**
+### 2. **Access to Customer Profile**
 
-- ERP-udbyderen skal have adgang til en slutkundes profil.
-- Opret en testkunde via vores forside ved brug af en ERP-udbyders egen e-mailadresse.
-- Testkunden skal have en eller flere konti tilknyttet ERP-udbyderen.
+- The ERP provider must have access to an end customer's profile.
+- Create a test customer via our homepage using the ERP provider's own email address.
+- The test customer must have one or more accounts linked to the ERP provider.
 
 ---
 
 ## API Endpoint
 
-Alle API-funktioner tilgås via:
+All API functions are accessed via:
 
 ```http
 https://api.bankintegration.dk
@@ -105,27 +105,27 @@ https://api.bankintegration.dk
 
 ---
 
-## HTTP Statuskoder
+## HTTP Status Codes
 
 - **Success:**
   - 200, 201, 202, 204
-- **Fejl:**
-  - 500-599 for system- eller forbindelsesfejl
+- **Error:**
+  - 500-599 for system or connection errors
 
-Se yderligere detaljer her: [HTTP/1.1 Status Code Definitions](https://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html).
+See further details here: [HTTP/1.1 Status Code Definitions](https://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html).
 
 ---
 
-## Godkendelse
+## Authentication
 
-### Godkendelse af forespørgsler
+### Request Authentication
 
-For alle forespørgsler skal medsendes et JSON godkendelsesobjekt i forespørgslens header. Denne side forklarer beregningsproceduren for objektet og hvordan det indsættes i anmodningen.
+All requests must include a JSON authentication object in the request header. This section explains the calculation procedure for the object and how to insert it into the request.
 
-Der oprettes et JSON godkendelsesobjekt som nedenfor. JSON objektet sendes med alle HTTP 1.1 GET/POST forespørgsler som et UTF-8 kodet byte array i Base64 format. Værdien indsættes i HTTP 1.1 Authorization header værdien.
+A JSON authentication object is created as below. The JSON object is sent with all HTTP 1.1 GET/POST requests as a UTF-8 encoded byte array in Base64 format. The value is inserted into the HTTP 1.1 Authorization header value.
 
-For betalingsanmodninger (POST) oprettes et hash objekt for hver transaktion.
-For GET forespørgsler (status, kontoudtog m.m.) oprettes kun et hash objekt hvor "id" sættes til værdien i "requestId".
+For payment requests (POST), a hash object is created for each transaction.
+For GET requests (status, account statements, etc.), only one hash object is created where "id" is set to the value in "requestId".
 
 ```json
 {
@@ -147,25 +147,25 @@ For GET forespørgsler (status, kontoudtog m.m.) oprettes kun et hash objekt hvo
 }
 ```
 
-For hver transaktion i betalingsanmodningen beregnes en hash værdi som indsættes i godkendelsesobjektets hash-array. 
-Alle dele af strengen (Payload) adskilles af et # (pound). Blanke/tomme værdier medtages.
+For each transaction in the payment request, a hash value is calculated and inserted into the authentication object's hash array.
+All parts of the string (Payload) are separated by a # (pound). Blank/empty values are included.
 
-Først sammensættes payload strengen af dels de værdier som der findes i transaktionen og dels af de øverste værdier.
+First, the payload string is composed of the values found in the transaction and the top values.
 
-1. En token streng af kundens password som en SHA256 hash over et UTF-8 kodet byte array formateret i HEX.
-2. Kundens konto nr. formateres til BBAN (14 cifre).
-3. Betalingsdato formateres til YYYYMMDD (Y=år, M=måned, D=dato).
-4. Beløb formatet med to decimaler og punktum som decimalseparator (ingen tusindtals adskiller).
-5. Valuta formateres til ISO valuta kode (som DKK eller USD).
-6. Konto eller betalings ID hentes fra request objekt.
-7. ERP udbyders navn/kode indsættes.
-8. Betalings ID fra transaktion indsættes.
-9. Det aktuelle UTC tidspunkt formateres til YYYYMMDDHHmmSS (Y=år, M=måned, D=dato, H=time (24h), m=minut, S=sekund).
+1. A token string of the customer's password as a SHA256 hash over a UTF-8 encoded byte array formatted in HEX.
+2. The customer's account number formatted to BBAN (14 digits).
+3. Payment date formatted to YYYYMMDD (Y=year, M=month, D=day).
+4. Amount formatted with two decimals and a period as the decimal separator (no thousand separators).
+5. Currency formatted to ISO currency code (like DKK or USD).
+6. Account or payment ID is retrieved from the request object.
+7. ERP provider's name/code is inserted.
+8. Payment ID from the transaction is inserted.
+9. The current UTC time formatted to YYYYMMDDHHmmSS (Y=year, M=month, D=day, H=hour (24h), m=minute, S=second).
 
-Over hver payload streng (som UTF-8 kodet byte array) genereres nu en HMAC/SHA256 hash med ERP udbyders API-nøgle som nøgle. 
-HMAC værdien indsættes sammen med `<PaymentId>` og HMAC som Base64 streng.
+A HMAC/SHA256 hash is now generated over each payload string (as a UTF-8 encoded byte array) with the ERP provider's API key as the key.
+The HMAC value is inserted along with `<PaymentId>` and HMAC as a Base64 string.
 
-### C# kode for beregning af hash
+### C# Code for Hash Calculation
 
 ```csharp
 using System;

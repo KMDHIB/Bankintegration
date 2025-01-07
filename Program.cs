@@ -15,12 +15,12 @@ namespace BankIntegration
         /// <summary>
         /// The main entry point for the application.
         /// </summary>
-        /// <param name="args">Command line arguments. Expects two arguments: <konto> and <integrationskode>.</param>
+        /// <param name="args">Command line arguments. Expects two arguments: <account> and <integration code>.</param>
         static async Task Main(string[] args)
         {
             if (args.Length != 2)
             {
-                Write("Usage: <konto> <integrationskode>");
+                Write("Usage: <account> <integration code>");
                 Write(string.Empty);
                 return;
             }
@@ -34,7 +34,7 @@ namespace BankIntegration
             string kontonr = args[0];
             string integrationskode = args[1];
 
-            Write("Resultat fra bankintegration.dk:");
+            Write("Result from bankintegration.dk:");
             Write(string.Empty);
             Write(await GetEntries(erpId, erpNavn, kontonr, integrationskode, requestId, time));
             Write(string.Empty);
@@ -102,14 +102,14 @@ namespace BankIntegration
 
             string jsonString = JsonSerializer.Serialize(auth);
 
-            Write("JSON objekt for godkendelse: " + jsonString);
+            Write("JSON object for authentication: " + jsonString);
             Write(string.Empty);
 
             var bytes = Encoding.UTF8.GetBytes(jsonString);
 
             string requestHeader = Convert.ToBase64String(bytes);
 
-            Write("Ovenstående er her kodet i UTF-8 bytes præsenteret som Base64: " + requestHeader);
+            Write("Authentication object encoded in UTF-8 bytes and presented as Base64: " + requestHeader);
             Write(string.Empty);
 
             return requestHeader;
@@ -136,12 +136,12 @@ namespace BankIntegration
 
             string payLoad = $"{token}#{custacc}#{currency}#{requestId}#{paydate}#{amount}#{credacc}#{erpName}#{payid}#{now:yyyyMMddHHmmss}";
 
-            Write("Payload for hash beregning: " + payLoad);
+            Write("Payload for hash calculation: " + payLoad);
             Write(string.Empty);
 
             string hashedString = HashHmacSha256(payLoad.ToString(), new Guid(apikey));
 
-            Write("Hash kodet i UTF-8 bytes præsenteret som Base64: " + hashedString);
+            Write("Hash encoded in UTF-8 bytes presented as Base64: " + hashedString);
             Write(string.Empty);
 
             return hashedString;
@@ -188,7 +188,7 @@ namespace BankIntegration
         }
 
         /// <summary>
-        /// Intializes the console window.
+        /// Initializes the console window.
         /// </summary>
         private static void Init() {
             Console.ForegroundColor = ConsoleColor.Cyan;
