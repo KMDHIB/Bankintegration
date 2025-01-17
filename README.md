@@ -21,7 +21,8 @@ POST https://api.bankintegration.dk/payment
 **Endpoint:**
 
 ```http
-GET/POST https://api.bankintegration.dk/status
+GET https://api.bankintegration.dk/status
+POST https://api.bankintegration.dk/status
 ```
 
 ### 3. **Retrieve Account Statement**
@@ -29,7 +30,8 @@ GET/POST https://api.bankintegration.dk/status
 **Endpoint:**
 
 ```http
-GET/POST https://api.bankintegration.dk/report/account
+GET https://api.bankintegration.dk/report/account
+POST https://api.bankintegration.dk/report/account
 ```
 
 #### Example Account Statement Request
@@ -72,7 +74,8 @@ GET/POST https://api.bankintegration.dk/report/account
 **Endpoint:**
 
 ```http
-GET/POST https://api.bankintegration.dk/report/balance
+GET https://api.bankintegration.dk/report/balance
+POST https://api.bankintegration.dk/report/balance
 ```
 
 ---
@@ -99,7 +102,7 @@ The API key must be kept secret and only used by the ERP provider.
 
 All API functions are accessed via:
 
-```http
+```
 https://api.bankintegration.dk
 ```
 
@@ -133,7 +136,7 @@ For GET requests (status, account statements, etc.), only one hash object is cre
   "account": "<Customer bank account>",
   "time": "<UTC Timestamp>",
   "requestId": "<Request ID>",
-  "user": "<ERP's ID of user>" (optional),
+  "user": "<ERP's ID of user> (Optional)",
   "hash": [
     {
       "id": "<Payment ID>",
