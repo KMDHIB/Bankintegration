@@ -34,9 +34,13 @@ namespace BankIntegration
             string kontonr = args[0];
             string integrationskode = args[1];
 
+            var entries = await GetEntries(erpId, erpNavn, kontonr, integrationskode, requestId, time);
+
+            ExportToExcel(JsonSerializer.Deserialize<dynamic[]>(entries));
+
             Write("Result from bankintegration.dk:");
             Write(string.Empty);
-            Write(await GetEntries(erpId, erpNavn, kontonr, integrationskode, requestId, time));
+            Write(entries);
             Write(string.Empty);
         }
 
@@ -216,7 +220,7 @@ namespace BankIntegration
             foreach (char c in writestuff)
             {
                 Console.Write(c);
-                Thread.Sleep(1);
+                // Thread.Sleep(1);
             }
 
             Console.WriteLine();
@@ -224,6 +228,44 @@ namespace BankIntegration
             if (Console.ForegroundColor != ConsoleColor.Cyan) {
                 Console.ForegroundColor = ConsoleColor.Cyan;
             }                
+        }
+
+        /// <summary>
+        /// Exports an array of objects to an Excel file and saves it to c:\temp.
+        /// </summary>
+        /// <typeparam name="T">The type of objects in the array.</typeparam>
+        /// <param name="data">The array of objects to export.</param>
+        /// <param name="fileName">The name of the Excel file to save.</param>
+        private static void ExportToExcel<T>(T[] data)
+        {
+            string filePath = $@"c:\temp\{DateTime.Now.Ticks.ToString()}.xlsx";
+
+            using (var package = new OfficeOpenXml.ExcelPackage())
+            {
+            var worksheet = package.Workbook.Worksheets.Add("Sheet1");
+
+            // Add headers
+            var properties = typeof(T).GetProperties();
+            for (int i = 0; i < properties.Length; i++)
+            {
+                worksheet.Cells[1, i + 1].Value = properties[i].Name;
+            }
+
+            // Add data
+            for (int row = 0; row < data.Length; row++)
+            {
+                for (int col = 0; col < properties.Length; col++)
+                {
+                worksheet.Cells[row + 2, col + 1].Value = properties[col].GetValue(data[row]);
+                }
+            }
+
+            // Save to file
+            Directory.CreateDirectory(Path.GetDirectoryName(filePath));
+            File.WriteAllBytes(filePath, package.GetAsByteArray());
+            }
+
+            Write($"Excel file saved to {filePath}");
         }
 
         /// <summary>
