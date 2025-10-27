@@ -36,12 +36,42 @@ namespace BankIntegration
 
             var entries = await GetEntries(erpId, erpNavn, kontonr, integrationskode, requestId, time);
 
-            ExportToExcel(JsonSerializer.Deserialize<dynamic[]>(entries));
-
             Write("Result from bankintegration.dk:");
             Write(string.Empty);
             Write(entries);
             Write(string.Empty);
+
+            // Parse JSON response to see structure
+            try 
+            {
+                var jsonDocument = JsonDocument.Parse(entries);
+                var rootElement = jsonDocument.RootElement;
+                
+                // Try to find array in the response
+                if (rootElement.ValueKind == JsonValueKind.Array)
+                {
+                    var entriesArray = JsonSerializer.Deserialize<dynamic[]>(entries);
+                    ExportToExcel(entriesArray);
+                }
+                else if (rootElement.ValueKind == JsonValueKind.Object)
+                {
+                    // Look for array properties in the object
+                    foreach (var property in rootElement.EnumerateObject())
+                    {
+                        Write($"Property: {property.Name}, Type: {property.Value.ValueKind}");
+                        if (property.Value.ValueKind == JsonValueKind.Array)
+                        {
+                            var arrayData = JsonSerializer.Deserialize<dynamic[]>(property.Value.GetRawText());
+                            ExportToExcel(arrayData);
+                            break;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Write($"Error parsing JSON: {ex.Message}", ConsoleColor.Red);
+            }
         }
 
         /// <summary>
@@ -94,7 +124,7 @@ namespace BankIntegration
             {
                 serviceProvider = erp,
                 account = custacc,
-                time = now.ToString("yyyy-MM-ddTHH:mm:ss"),
+                time = now.ToString("yyyy-MM-ddTHH:mm:ss", System.Globalization.CultureInfo.InvariantCulture),
                 requestId = requestId,
                 hash = new List<AuthorizationHash>() {
                 new AuthorizationHash() {
@@ -104,7 +134,11 @@ namespace BankIntegration
             }
             };
 
-            string jsonString = JsonSerializer.Serialize(auth);
+            var options = new JsonSerializerOptions
+            {
+                Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+            };
+            string jsonString = JsonSerializer.Serialize(auth, options);
 
             Write("JSON object for authentication: " + jsonString);
             Write(string.Empty);
