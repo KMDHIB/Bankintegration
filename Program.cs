@@ -15,12 +15,13 @@ namespace BankIntegration
         /// <summary>
         /// The main entry point for the application.
         /// </summary>
-        /// <param name="args">Command line arguments. Expects two arguments: <account> and <integration code>.</param>
+        /// <param name="args">Command line arguments. Expects 2-4 arguments: <account> <integration code> [from] [to].</param>
         static async Task Main(string[] args)
         {
-            if (args.Length != 2)
+            if (args.Length < 2 || args.Length > 4)
             {
-                Write("Usage: <account> <integration code>");
+                Write("Usage: <account> <integration code> [from] [to]");
+                Write("Example: MyAccount MyCode 2025-01-01 2025-01-31");
                 Write(string.Empty);
                 return;
             }
@@ -34,7 +35,28 @@ namespace BankIntegration
             string kontonr = args[0];
             string integrationskode = args[1];
 
-            var entries = await GetEntries(erpId, erpNavn, kontonr, integrationskode, requestId, time);
+            // Parse optional from and to dates
+            DateTime fromDate, toDate;
+            if (args.Length >= 3 && DateTime.TryParse(args[2], out fromDate))
+            {
+                if (args.Length >= 4 && DateTime.TryParse(args[3], out toDate))
+                {
+                    // Both from and to specified
+                }
+                else
+                {
+                    // Only from specified, use end of month as to
+                    toDate = new DateTime(fromDate.Year, fromDate.Month, DateTime.DaysInMonth(fromDate.Year, fromDate.Month));
+                }
+            }
+            else
+            {
+                // No dates specified, use current month
+                fromDate = new DateTime(time.Year, time.Month, 1);
+                toDate = new DateTime(time.Year, time.Month, DateTime.DaysInMonth(time.Year, time.Month));
+            }
+
+            var entries = await GetEntries(erpId, erpNavn, kontonr, integrationskode, requestId, time, fromDate, toDate);
 
             Write("Result from bankintegration.dk:");
             Write(string.Empty);
@@ -50,8 +72,7 @@ namespace BankIntegration
                 // Try to find array in the response
                 if (rootElement.ValueKind == JsonValueKind.Array)
                 {
-                    var entriesArray = JsonSerializer.Deserialize<dynamic[]>(entries);
-                    ExportToExcel(entriesArray);
+                    ExportJsonArrayToExcel(rootElement, "BankEntries");
                 }
                 else if (rootElement.ValueKind == JsonValueKind.Object)
                 {
@@ -61,8 +82,7 @@ namespace BankIntegration
                         Write($"Property: {property.Name}, Type: {property.Value.ValueKind}");
                         if (property.Value.ValueKind == JsonValueKind.Array)
                         {
-                            var arrayData = JsonSerializer.Deserialize<dynamic[]>(property.Value.GetRawText());
-                            ExportToExcel(arrayData);
+                            ExportJsonArrayToExcel(property.Value, property.Name);
                             break;
                         }
                     }
@@ -83,16 +103,18 @@ namespace BankIntegration
         /// <param name="integrationskode">The integration code.</param>
         /// <param name="requestId">The unique request identifier.</param>
         /// <param name="now">The current date and time.</param>
+        /// <param name="fromDate">The start date for the query.</param>
+        /// <param name="toDate">The end date for the query.</param>
         /// <returns>A task that represents the asynchronous operation. The task result contains the response from the API as a string.</returns>
-        private static async Task<string> GetEntries(string erpId, string erpNavn, string konto, string integrationskode, string requestId, DateTime now)
+        private static async Task<string> GetEntries(string erpId, string erpNavn, string konto, string integrationskode, string requestId, DateTime now, DateTime fromDate, DateTime toDate)
         {
             using (var requestMessage = new HttpRequestMessage(HttpMethod.Post, "https://api.bankintegration.dk/report/account"))
             {
                 requestMessage.Content = JsonContent.Create(new
                 {
                     requestId = requestId,
-                    from = new DateTime(now.Year, now.Month, 1).ToString("yyyy-MM-dd"),
-                    to = new DateTime(now.Year, now.Month, DateTime.DaysInMonth(now.Year, now.Month)).ToString("yyyy-MM-dd"),
+                    from = fromDate.ToString("yyyy-MM-dd"),
+                    to = toDate.ToString("yyyy-MM-dd"),
                     newOnly = false
                 });
 
@@ -262,6 +284,98 @@ namespace BankIntegration
             if (Console.ForegroundColor != ConsoleColor.Cyan) {
                 Console.ForegroundColor = ConsoleColor.Cyan;
             }                
+        }
+
+        /// <summary>
+        /// Exports a JSON array to an Excel file and saves it to c:\temp.
+        /// </summary>
+        /// <param name="jsonArray">The JSON array element to export.</param>
+        /// <param name="sheetName">The name of the Excel sheet.</param>
+        private static void ExportJsonArrayToExcel(JsonElement jsonArray, string sheetName)
+        {
+            if (jsonArray.ValueKind != JsonValueKind.Array)
+            {
+                Write("Error: JSON element is not an array", ConsoleColor.Red);
+                return;
+            }
+
+            string filePath = $@"c:\temp\BankEntries_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+
+            using (var package = new OfficeOpenXml.ExcelPackage())
+            {
+                var worksheet = package.Workbook.Worksheets.Add(sheetName);
+
+                var arrayItems = jsonArray.EnumerateArray().ToArray();
+                if (arrayItems.Length == 0)
+                {
+                    Write("No data to export", ConsoleColor.Yellow);
+                    return;
+                }
+
+                // Get all unique property names from the first few items
+                var allProperties = new HashSet<string>();
+                foreach (var item in arrayItems.Take(10))
+                {
+                    if (item.ValueKind == JsonValueKind.Object)
+                    {
+                        foreach (var property in item.EnumerateObject())
+                        {
+                            allProperties.Add(property.Name);
+                        }
+                    }
+                }
+
+                var propertyNames = allProperties.ToArray();
+
+                // Add headers
+                for (int i = 0; i < propertyNames.Length; i++)
+                {
+                    worksheet.Cells[1, i + 1].Value = propertyNames[i];
+                    worksheet.Cells[1, i + 1].Style.Font.Bold = true;
+                }
+
+                // Add data
+                for (int row = 0; row < arrayItems.Length; row++)
+                {
+                    if (arrayItems[row].ValueKind == JsonValueKind.Object)
+                    {
+                        for (int col = 0; col < propertyNames.Length; col++)
+                        {
+                            if (arrayItems[row].TryGetProperty(propertyNames[col], out JsonElement property))
+                            {
+                                worksheet.Cells[row + 2, col + 1].Value = GetJsonValue(property);
+                            }
+                        }
+                    }
+                }
+
+                // Auto-fit columns
+                worksheet.Cells.AutoFitColumns();
+
+                // Save to file
+                Directory.CreateDirectory(@"c:\temp");
+                File.WriteAllBytes(filePath, package.GetAsByteArray());
+                
+                Write($"Excel file with {arrayItems.Length} entries saved to {filePath}");
+            }
+        }
+
+        /// <summary>
+        /// Converts a JsonElement to a string value for Excel.
+        /// </summary>
+        /// <param name="element">The JSON element to convert.</param>
+        /// <returns>The string representation of the JSON value.</returns>
+        private static object GetJsonValue(JsonElement element)
+        {
+            return element.ValueKind switch
+            {
+                JsonValueKind.String => element.GetString(),
+                JsonValueKind.Number => element.TryGetDecimal(out var dec) ? (object)dec : element.GetDouble(),
+                JsonValueKind.True => true,
+                JsonValueKind.False => false,
+                JsonValueKind.Null => null,
+                _ => element.ToString()
+            };
         }
 
         /// <summary>
