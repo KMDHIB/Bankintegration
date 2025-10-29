@@ -5,10 +5,18 @@
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <UserSecretsId>606e529f-157b-4379-83c8-da9bba6dcef5</UserSecretsId>
+    <UserSecretsId>7c4dfeed-201a-478c-898e-b8b9c878257e</UserSecretsId>
   </PropertyGroup>
-   <ItemGroup>
-    <PackageReference Include="EPPlus" Version="7.7.0" />
+
+  <ItemGroup>
+    <PackageReference Include="EPPlus" Version="7.4.2" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="9.0.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="9.0.0" />
   </ItemGroup>
+
+  <!-- Include Accounts.txt as embedded resource if it exists -->
+  <ItemGroup>
+    <EmbeddedResource Include="Accounts.txt" Condition="Exists('Accounts.txt')" />
+  </ItemGroup>
+
 </Project>

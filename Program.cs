@@ -18,10 +18,18 @@ namespace BankIntegration
         /// <param name="args">Command line arguments. Expects 2-4 arguments: <account> <integration code> [from] [to].</param>
         static async Task Main(string[] args)
         {
+            // Check if user wants to see schools list
+            if (args.Length == 1 && args[0].ToLower() == "konti")
+            {
+                ShowAccounts();
+                return;
+            }
+
             if (args.Length < 2 || args.Length > 4)
             {
                 Write("Usage: <account> <integration code> [from] [to]");
                 Write("Example: MyAccount MyCode 2025-01-01 2025-01-31");
+                Write("Or use: konti - to show available accounts");
                 Write(string.Empty);
                 return;
             }
@@ -355,8 +363,59 @@ namespace BankIntegration
                 // Save to file
                 Directory.CreateDirectory(@"c:\temp");
                 File.WriteAllBytes(filePath, package.GetAsByteArray());
-                
+
                 Write($"Excel file with {arrayItems.Length} entries saved to {filePath}");
+            }
+        }
+        
+                private static void ShowAccounts()
+        {
+            try
+            {
+                var assembly = System.Reflection.Assembly.GetExecutingAssembly();
+                var resourceName = "Bankintegration.Accounts.txt";
+                
+                using (Stream stream = assembly.GetManifestResourceStream(resourceName))
+                {
+                    if (stream == null)
+                    {
+                        Write("Accounts.txt file not found in application resources.", ConsoleColor.Yellow);
+                        Write("Make sure Accounts.txt exists in the project folder when building.", ConsoleColor.Yellow);
+                        return;
+                    }
+
+                    using (StreamReader reader = new StreamReader(stream))
+                    {
+                        string content = reader.ReadToEnd();
+                        
+                        if (string.IsNullOrWhiteSpace(content))
+                        {
+                            Write("Accounts.txt file is empty.", ConsoleColor.Yellow);
+                            return;
+                        }
+
+                        Write("Available Accounts:", ConsoleColor.Green);
+                        Write(new string('=', 50), ConsoleColor.Green);
+                        Write(string.Empty);
+                        
+                        // Split content by lines and display each account
+                        var lines = content.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+                        foreach (var line in lines)
+                        {
+                            if (!string.IsNullOrWhiteSpace(line))
+                            {
+                                Write(line.Trim());
+                            }
+                        }
+                        
+                        Write(string.Empty);
+                        Write($"Total accounts found: {lines.Length}", ConsoleColor.Green);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Write($"Error reading Accounts.txt: {ex.Message}", ConsoleColor.Red);
             }
         }
 
