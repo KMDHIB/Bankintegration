@@ -10,7 +10,7 @@ namespace BankIntegration
 {
     class Program
     {   
-        private static IConfiguration _configuration;
+        private static IConfiguration _configuration = null!;
 
         /// <summary>
         /// The main entry point for the application.
@@ -18,6 +18,8 @@ namespace BankIntegration
         /// <param name="args">Command line arguments. Expects 2-4 arguments: <account> <integration code> [from] [to].</param>
         static async Task Main(string[] args)
         {
+            Init(); // Initialize configuration first
+
             // Check if user wants to see schools list
             if (args.Length == 1 && args[0].ToLower() == "konti")
             {
@@ -32,9 +34,7 @@ namespace BankIntegration
                 Write("Or use: konti - to show available accounts");
                 Write(string.Empty);
                 return;
-            }
-
-            Init(); 
+            } 
 
             string requestId = Guid.NewGuid().ToString();
             DateTime time = DateTime.UtcNow;
@@ -262,7 +262,11 @@ namespace BankIntegration
             Console.ForegroundColor = ConsoleColor.Cyan;
             Console.BackgroundColor = ConsoleColor.DarkBlue;
             if (!Debugger.IsAttached) {
-                Console.Clear();
+                try {
+                    Console.Clear();
+                } catch {
+                    // Ignore clear errors when output is piped
+                }
             }
 
             _configuration = new ConfigurationBuilder()
@@ -372,50 +376,32 @@ namespace BankIntegration
         {
             try
             {
-                var assembly = System.Reflection.Assembly.GetExecutingAssembly();
-                var resourceName = "Bankintegration.Accounts.txt";
+                var accounts = _configuration.GetBankAccounts();
                 
-                using (Stream stream = assembly.GetManifestResourceStream(resourceName))
+                if (!accounts.Any())
                 {
-                    if (stream == null)
-                    {
-                        Write("Accounts.txt file not found in application resources.", ConsoleColor.Yellow);
-                        Write("Make sure Accounts.txt exists in the project folder when building.", ConsoleColor.Yellow);
-                        return;
-                    }
-
-                    using (StreamReader reader = new StreamReader(stream))
-                    {
-                        string content = reader.ReadToEnd();
-                        
-                        if (string.IsNullOrWhiteSpace(content))
-                        {
-                            Write("Accounts.txt file is empty.", ConsoleColor.Yellow);
-                            return;
-                        }
-
-                        Write("Available Accounts:", ConsoleColor.Green);
-                        Write(new string('=', 50), ConsoleColor.Green);
-                        Write(string.Empty);
-                        
-                        // Split content by lines and display each account
-                        var lines = content.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
-                        foreach (var line in lines)
-                        {
-                            if (!string.IsNullOrWhiteSpace(line))
-                            {
-                                Write(line.Trim());
-                            }
-                        }
-                        
-                        Write(string.Empty);
-                        Write($"Total accounts found: {lines.Length}", ConsoleColor.Green);
-                    }
+                    Write("No accounts found in User Secrets.", ConsoleColor.Yellow);
+                    Write("Use 'dotnet user-secrets set \"BankAccounts\" \"[{...}]\"' to add accounts.", ConsoleColor.Yellow);
+                    return;
                 }
+
+                Write("Available Accounts:", ConsoleColor.Green);
+                Write(new string('=', 50), ConsoleColor.Green);
+                Write(string.Empty);
+                Write($"{"NAVN",-40} {"INSTKODE",-10} {"BBAN",-18} INTEGRATIONSKEY");
+                Write(new string('-', 80), ConsoleColor.Gray);
+                
+                foreach (var account in accounts)
+                {
+                    Write($"{account.Navn,-40} {account.InstKode,-10} {account.BBAN,-18} {account.IntegrationsKey}");
+                }
+                
+                Write(string.Empty);
+                Write($"Total accounts found: {accounts.Count}", ConsoleColor.Green);
             }
             catch (Exception ex)
             {
-                Write($"Error reading Accounts.txt: {ex.Message}", ConsoleColor.Red);
+                Write($"Error reading accounts from User Secrets: {ex.Message}", ConsoleColor.Red);
             }
         }
 
@@ -468,7 +454,7 @@ namespace BankIntegration
             }
 
             // Save to file
-            Directory.CreateDirectory(Path.GetDirectoryName(filePath));
+            Directory.CreateDirectory(Path.GetDirectoryName(filePath) ?? "c:\\temp");
             File.WriteAllBytes(filePath, package.GetAsByteArray());
             }
 
@@ -482,6 +468,24 @@ namespace BankIntegration
         {
             public string id { get; set; } = string.Empty;
             public string hash { get; set; } = string.Empty;
+        }
+    }
+
+    public class Account
+    {
+        public string Navn { get; set; } = "";
+        public string InstKode { get; set; } = "";
+        public string BBAN { get; set; } = "";
+        public string IntegrationsKey { get; set; } = "";
+    }
+
+    // Hjælpeklasse til at håndtere konto-konfiguration
+    public static class ConfigurationExtensions
+    {
+        public static List<Account> GetBankAccounts(this IConfiguration configuration)
+        {
+            // Læs direkte som array fra configuration section
+            return configuration.GetSection("BankAccounts").Get<List<Account>>() ?? new List<Account>();
         }
     }
 }

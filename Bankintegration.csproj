@@ -11,12 +11,10 @@
   <ItemGroup>
     <PackageReference Include="EPPlus" Version="7.4.2" />
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="9.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="9.0.10" />
     <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="9.0.0" />
   </ItemGroup>
 
-  <!-- Include Accounts.txt as embedded resource if it exists -->
-  <ItemGroup>
-    <EmbeddedResource Include="Accounts.txt" Condition="Exists('Accounts.txt')" />
-  </ItemGroup>
+
 
 </Project>
